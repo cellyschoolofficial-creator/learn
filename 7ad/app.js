@@ -183,10 +183,15 @@ $("#again").onclick=()=>{if(S.last.length)say(S.last);};
 /* ================= Celly listens (one microphone session for the whole game) ================= */
 const Mic={sr:null,want:false,blocked:false,cb:null,muteUntil:0};
 Mic.start=function(){if(!SR||Mic.sr||Mic.blocked)return;const r=new SR();r.lang="en-GB";r.continuous=true;r.interimResults=true;r.maxAlternatives=3;
-  r.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++){const res=e.results[i];if(S.speaking||performance.now()<Mic.muteUntil)continue;
+  const echo=new Set();
+  r.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++){const res=e.results[i];
+    // a phrase that started while Celly was talking is Celly's own voice (echo from the speakers): ignore it, even when it finishes later
+    if(S.speaking||performance.now()<Mic.muteUntil){echo.add(i);continue;}
+    if(echo.has(i))continue;
     const alts=[];for(let k=0;k<res.length;k++)alts.push(res[k].transcript.toLowerCase().trim());if(Mic.cb&&alts[0])Mic.cb(alts,res.isFinal);}};
   r.onerror=e=>{if(e.error==="not-allowed"||e.error==="service-not-allowed"){Mic.blocked=true;Mic.want=false;micBlocked();}};
   r.onend=()=>{Mic.sr=null;if(Mic.want&&!Mic.blocked&&S.mode==="talk")setTimeout(()=>Mic.start(),250);};
+  r.onstart=()=>echo.clear();
   Mic.want=true;Mic.sr=r;try{r.start();}catch(e){Mic.sr=null;}};
 Mic.stop=function(){Mic.want=false;if(Mic.sr)try{Mic.sr.stop();}catch(e){}};
 function micBlocked(){setMode("tap");$("#live").textContent="The microphone is off, so we'll tap. A grown-up can allow the microphone and switch talk mode back on.";}
@@ -229,9 +234,11 @@ function waitClick(sel){return new Promise(r=>{const b=$(sel);if(b)b.onclick=()=
 function bigStage(on){$("#stage").classList.toggle("bigstage",on);}
 async function watch(src,label){
   card.insertAdjacentHTML("beforeend",`<video class="clip" id="clip" src="${src}" playsinline controls preload="auto" aria-label="${label}"></video><div class="row"><button class="tbtn" id="skipClip">skip the clip</button></div>`);
+  const v=$("#clip");v.volume=1;let skipped=false;
+  const ended=new Promise(r=>{let done=false;const fin=()=>{if(!done){done=true;r();}};v.onended=fin;v.onerror=fin;$("#skipClip").onclick=()=>{skipped=true;stopVoice();v.pause();fin();};});
   await say("watch",{face:"happy"});
-  const v=$("#clip");v.volume=1;
-  await new Promise(r=>{let done=false;const fin=()=>{if(!done){done=true;r();}};v.onended=fin;v.onerror=fin;$("#skipClip").onclick=()=>{v.pause();fin();};v.play().catch(()=>{});});
+  if(!skipped)v.play().catch(()=>{});
+  await ended;
   v.remove();$("#skipClip").parentElement.remove();Celly.pose("happy",900);SFX.pop();}
 
 /* ================= 0 · start and the sneeze ================= */
