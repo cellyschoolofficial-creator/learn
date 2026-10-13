@@ -102,6 +102,7 @@ const SFX={
   drum(){SFX.kal(220,0,.22);tone(110,0,.12,.12,"triangle");},
   oops(){SFX.kal(330,0,.1);SFX.kal(294,.12,.1);},
   pop(){const c=ac();if(!c)return;const t=c.currentTime,o=c.createOscillator(),g=c.createGain();o.frequency.setValueAtTime(320,t);o.frequency.exponentialRampToValueAtTime(960,t+.09);g.gain.setValueAtTime(.12,t);g.gain.exponentialRampToValueAtTime(.001,t+.14);o.connect(g).connect(c.destination);o.start(t);o.stop(t+.16);},
+  tickle(){[0,.55,1.1].forEach((t,i)=>{const f=[523.3,659.3,784][i];SFX.kal(f,t,.12);tone(f*1.5,t+.08,.05,.18);tone(f*2,t+.16,.03,.12);});},
   whoosh(){const c=ac();if(!c)return;const n=c.sampleRate*.6,b=c.createBuffer(1,n,c.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*(1-i/n);
     const s=c.createBufferSource(),f=c.createBiquadFilter(),g=c.createGain();s.buffer=b;f.type="bandpass";f.frequency.setValueAtTime(400,c.currentTime);f.frequency.exponentialRampToValueAtTime(2400,c.currentTime+.5);g.gain.value=.25;s.connect(f).connect(g).connect(c.destination);s.start();}
 };
@@ -245,7 +246,8 @@ function start(){
   $("#go").onclick=async()=>{ac();loadSprite();S.started=true;if(canHear())Mic.start();
     show(`<h2>Oh no…</h2><p class="muted">Listen to Celly.</p>`,0);
     await say("hello",{face:"happy",pose:"talk wave"});
-    Celly.face("surprised");Celly.setPose("shiver");await say("sneeze",{pose:"shiver"});
+    Celly.face("surprised");Celly.setPose("wiggle");$("#say").textContent="Uh-oh… my nose is tickly…";SFX.tickle();await sleep(1700);
+    Celly.setPose("shiver");await say("sneeze",{pose:"shiver"});
     SFX.whoosh();await scatter();Celly.face("oops");Celly.setPose("idle");confetti(innerWidth/2,innerHeight/3,30);
     await say("scattered",{face:"oops"});await say("help",{face:"worried"});Celly.face("normal");
     if(canHear()){
